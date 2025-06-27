@@ -6,6 +6,7 @@ import Typewriter from "../Typewriter";
 import Logo from '../chainlink-logo.svg';
 import logo from '../CROSSLINK.png'
 import Image from "next/image";
+import { Button, Card, CardHeader, CardTitle, CardContent, Input, Select, Badge, ToastContainer, useToast } from '../components/ui';
 const contractABI = require('./abi.json');
 
 // Standard ERC20 ABI for USDC token interactions
@@ -92,6 +93,7 @@ export default function USDCBridge() {
   const [usdcAllowance, setUsdcAllowance] = useState('0');
   const [isApproving, setIsApproving] = useState(false);
   const [approvalNeeded, setApprovalNeeded] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     const loadWeb3 = async () => {
@@ -182,14 +184,14 @@ export default function USDCBridge() {
       ).send({ from: account });
       
       console.log('USDC approval successful:', txResponse);
-      alert('USDC approval successful! You can now transfer USDC.');
+      toast.success('USDC Approval Successful', 'You can now transfer USDC tokens.');
       
       // Refresh allowance after approval
       await checkUsdcAllowance();
       
     } catch (error) {
       console.error('USDC approval failed:', error);
-      alert('USDC approval failed. Please try again.');
+      toast.error('USDC Approval Failed', 'Please try again.');
     } finally {
       setIsApproving(false);
     }
@@ -212,12 +214,12 @@ export default function USDCBridge() {
 
   const handleTransfer = async () => {
     if (!account || !receiverAddress || !amount || !selectedDestination) {
-      alert("Please fill in all fields and ensure wallet is connected.");
+      toast.warning('Missing Information', 'Please fill in all fields and ensure wallet is connected.');
       return;
     }
 
     if (currentNetwork !== 'sepolia') {
-      alert("Please switch to Ethereum Sepolia to initiate transfers.");
+      toast.warning('Wrong Network', 'Please switch to Ethereum Sepolia to initiate transfers.');
       return;
     }
 
@@ -225,7 +227,7 @@ export default function USDCBridge() {
     await checkUsdcAllowance();
     
     if (parseFloat(usdcAllowance) < parseFloat(amount)) {
-      alert(`Insufficient USDC allowance. Current allowance: ${usdcAllowance} USDC. Please approve first.`);
+      toast.warning('Insufficient Allowance', `Current allowance: ${usdcAllowance} USDC. Please approve first.`);
       return;
     }
 
@@ -247,205 +249,260 @@ export default function USDCBridge() {
       setTransactionHash(txResponse.events.UsdcTransferred.returnValues.messageId);
       setIsTransferring(false);
       
+      toast.success('Transfer Successful', 'Your USDC transfer has been initiated!');
+      
       // Refresh balances after successful transfer
       await checkBalance(account);
       await checkUsdcAllowance();
     } catch (error) {
       console.error('Transfer failed:', error);
-      alert('Transfer failed! Please check console for details.');
+      toast.error('Transfer Failed', 'Please check console for details.');
       setIsTransferring(false);
     }
   };
 
+  // Network options for select component
+  const networkOptions = [
+    { value: 'arbitrumSepolia', label: 'Arbitrum Sepolia' },
+    { value: 'optimismSepolia', label: 'Optimism Sepolia' },
+    { value: 'polygonAmoy', label: 'Polygon Amoy' }
+  ];
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", paddingTop: "2rem", maxWidth: "600px", margin: "0 auto", padding: "2rem" }}>
-      <Image src={logo} alt="CrossLink Logo" style={{ width: 250, marginBottom: 5}}/>
-      <Typewriter text="Powered by Chainlink CCIP" />
-      <Image src={Logo} alt="Chainlink Logo" style={{ width: 200, marginBottom: 5}}/>
-      
-      <div className="w-full max-w-md">
-        <h1 className="text-2xl font-bold text-center mb-6 text-white">
-          Cross-Chain USDC Bridge
-        </h1>
+    <>
+      <ToastContainer />
+      <div className="min-h-screen flex flex-col items-center px-4 py-8 animate-fade-in">
+        {/* Header */}
+        <div className="text-center mb-8 animate-slide-up">
+          <Image src={logo} alt="CrossLink Logo" className="w-64 mx-auto mb-4"/>
+          <div className="mb-4">
+            <Typewriter text="Powered by Chainlink CCIP" />
+          </div>
+          <Image src={Logo} alt="Chainlink Logo" className="w-48 mx-auto"/>
+        </div>
         
-        {/* Network Status */}
-        <div className="mb-4 p-3 bg-gray-800 rounded-lg">
-          <p className="text-sm text-gray-300">
-            Current Network: <span className="text-blue-400 font-semibold">{NETWORKS[currentNetwork].name}</span>
-          </p>
-          {currentNetwork !== 'sepolia' && (
-            <button 
-              onClick={switchToSepolia}
-              className="mt-2 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-            >
-              Switch to Sepolia
-            </button>
-          )}
-        </div>
-
-        {/* Destination Network Selection */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Destination Network
-          </label>
-          <select 
-            value={selectedDestination} 
-            onChange={(e) => setSelectedDestination(e.target.value)}
-            className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="arbitrumSepolia">Arbitrum Sepolia</option>
-            <option value="optimismSepolia">Optimism Sepolia</option>
-            <option value="polygonAmoy">Polygon Amoy</option>
-          </select>
-        </div>
-
-        {/* Receiver Address Input */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Receiver Address
-          </label>
-          <input 
-            type="text" 
-            placeholder="0x..." 
-            value={receiverAddress} 
-            onChange={(e) => setReceiverAddress(e.target.value)} 
-            className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        {/* Amount Input */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Amount (USDC)
-          </label>
-          <input 
-            type="number" 
-            placeholder="0.0" 
-            value={amount} 
-            onChange={(e) => setAmount(e.target.value)} 
-            className="w-full p-3 border border-gray-600 rounded-lg bg-gray-800 text-white focus:ring-2 focus:ring-blue-500"
-            step="0.000001"
-            min="0"
-          />
-          
-          {/* USDC Allowance Status */}
-          {account && amount && (
-            <div className="mt-2 p-2 bg-gray-700 rounded-lg text-sm">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-300">USDC Allowance:</span>
-                <span className={`font-medium ${
-                  parseFloat(usdcAllowance) >= parseFloat(amount || '0') 
-                    ? 'text-green-400' 
-                    : 'text-red-400'
-                }`}>
-                  {usdcAllowance} USDC
-                </span>
+        <div className="w-full max-w-lg">
+          <Card variant="glass" className="animate-slide-up">
+            <CardHeader>
+              <CardTitle className="text-center text-gradient">
+                Cross-Chain USDC Bridge
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+        
+              {/* Network Status */}
+              <div className="mb-6 p-4 bg-gray-800/40 rounded-lg border border-gray-700">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Badge 
+                      variant={currentNetwork === 'sepolia' ? 'success' : 'warning'} 
+                      dot 
+                    />
+                    <span className="text-sm text-gray-300">Current Network:</span>
+                    <span className="text-blue-400 font-semibold">
+                      {NETWORKS[currentNetwork].name}
+                    </span>
+                  </div>
+                  {currentNetwork !== 'sepolia' && (
+                    <Button 
+                      size="sm"
+                      variant="warning"
+                      onClick={switchToSepolia}
+                    >
+                      Switch to Sepolia
+                    </Button>
+                  )}
+                </div>
               </div>
-              {approvalNeeded && (
-                <div className="mt-2">
-                  <button 
-                    onClick={approveUsdc}
-                    disabled={isApproving}
-                    className="w-full px-3 py-2 bg-yellow-600 text-white text-sm rounded hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isApproving ? 'Approving...' : 'Approve USDC Spending'}
-                  </button>
+
+              {/* Destination Network Selection */}
+              <Select
+                label="Destination Network"
+                options={networkOptions}
+                value={selectedDestination}
+                onChange={setSelectedDestination}
+                helperText="Select the blockchain where you want to receive USDC"
+              />
+
+              {/* Receiver Address Input */}
+              <Input
+                label="Receiver Address"
+                type="text"
+                placeholder="0x..."
+                value={receiverAddress}
+                onChange={(e) => setReceiverAddress(e.target.value)}
+                helperText="Enter the wallet address that will receive the USDC"
+                leftIcon={
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                }
+              />
+
+              {/* Amount Input */}
+              <Input
+                label="Amount (USDC)"
+                type="number"
+                placeholder="0.0"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                step="0.000001"
+                min="0"
+                helperText="Enter the amount of USDC to transfer"
+                leftIcon={
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                  </svg>
+                }
+              />
+              
+              {/* USDC Allowance Status */}
+              {account && amount && (
+                <div className="mt-4 p-4 bg-gray-800/40 rounded-lg border border-gray-700">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-gray-300">USDC Allowance:</span>
+                    <div className="flex items-center space-x-2">
+                      <Badge 
+                        variant={parseFloat(usdcAllowance) >= parseFloat(amount || '0') ? 'success' : 'error'}
+                      >
+                        {usdcAllowance} USDC
+                      </Badge>
+                    </div>
+                  </div>
+                  {approvalNeeded && (
+                    <Button 
+                      fullWidth
+                      variant="warning"
+                      size="sm"
+                      loading={isApproving}
+                      onClick={approveUsdc}
+                    >
+                      {isApproving ? 'Approving...' : 'Approve USDC Spending'}
+                    </Button>
+                  )}
                 </div>
               )}
-            </div>
-          )}
-        </div>
 
-        {/* Transfer Button */}
-        <button 
-          type="button" 
-          style={buttonStyle} 
-          onClick={handleTransfer}
-          disabled={isTransferring || currentNetwork !== 'sepolia' || (amount && parseFloat(usdcAllowance) < parseFloat(amount))}
-          className="w-full mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isTransferring ? 'Transferring...' : 
-           (amount && parseFloat(usdcAllowance) < parseFloat(amount)) ? 'Approve USDC First' :
-           `Transfer USDC to ${NETWORKS[selectedDestination].name}`}
-        </button>
+              {/* Transfer Button */}
+              <div className="mt-6">
+                <Button 
+                  fullWidth
+                  size="lg"
+                  loading={isTransferring}
+                  disabled={currentNetwork !== 'sepolia' || (amount && parseFloat(usdcAllowance) < parseFloat(amount))}
+                  onClick={handleTransfer}
+                  icon={
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
+                    </svg>
+                  }
+                >
+                  {isTransferring ? 'Processing Transfer...' : 
+                   (amount && parseFloat(usdcAllowance) < parseFloat(amount)) ? 'Approve USDC First' :
+                   `Transfer to ${NETWORKS[selectedDestination].name}`}
+                </Button>
+              </div>
 
-        {/* Balance and Allowance Check Buttons */}
-        <div className='flex gap-2 mb-4'>
-          <button 
-            type="button" 
-            style={{...buttonStyle, fontSize: '0.8rem', padding: '6px 12px'}} 
-            onClick={() => checkBalance(account)}
-            className="flex-1"
-          >
-            My Balance
-          </button>
-          <button 
-            type="button" 
-            style={{...buttonStyle, fontSize: '0.8rem', padding: '6px 12px'}} 
-            onClick={() => checkBalance(NETWORKS[currentNetwork].contractAddress)}
-            className="flex-1"
-          >
-            Contract Balance
-          </button>
-          <button 
-            type="button" 
-            style={{...buttonStyle, fontSize: '0.8rem', padding: '6px 12px'}} 
-            onClick={checkUsdcAllowance}
-            className="flex-1"
-          >
-            Check Allowance
-          </button>
-        </div>
+              {/* Balance and Allowance Check Buttons */}
+              <div className='flex gap-2 mt-4'>
+                <Button 
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => checkBalance(account)}
+                  className="flex-1"
+                >
+                  My Balance
+                </Button>
+                <Button 
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => checkBalance(NETWORKS[currentNetwork].contractAddress)}
+                  className="flex-1"
+                >
+                  Contract Balance
+                </Button>
+                <Button 
+                  variant="ghost"
+                  size="sm"
+                  onClick={checkUsdcAllowance}
+                  className="flex-1"
+                >
+                  Check Allowance
+                </Button>
+              </div>
 
-        {/* Balance Display */}
-        {balance && (
-          <div className="mb-4 p-3 bg-green-900/20 border border-green-500/30 rounded-lg">
-            <p className="text-green-400 text-sm font-medium">Balance: {balance}</p>
-          </div>
-        )}
+              {/* Balance Display */}
+              {balance && (
+                <div className="mt-4">
+                  <Badge variant="success" size="lg" className="w-full justify-center py-3">
+                    Balance: {balance}
+                  </Badge>
+                </div>
+              )}
         
-        {/* Transaction Status */}
-        <Loading isLoading={isTransferring} />
-        {!isTransferring && transactionHash && (
-          <div className="mb-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
-            <p className="text-blue-400 text-sm mb-2">Transaction Completed!</p>
-            <a  
-              href={`https://ccip.chain.link/msg/${transactionHash}`} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-blue-300 underline hover:text-blue-200 text-sm"
-            >
-              View on CCIP Explorer →
-            </a>
-          </div>
-        )}
-        {isTransferring && <Typewriter text="Processing your cross-chain transfer..." />}
+              {/* Transaction Status */}
+              {isTransferring && (
+                <div className="mt-6 text-center">
+                  <Loading isLoading={isTransferring} />
+                  <div className="mt-4">
+                    <Typewriter text="Processing your cross-chain transfer..." />
+                  </div>
+                </div>
+              )}
+              
+              {!isTransferring && transactionHash && (
+                <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                  <div className="text-center">
+                    <Badge variant="info" size="lg" className="mb-3">
+                      Transaction Completed!
+                    </Badge>
+                    <div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => window.open(`https://ccip.chain.link/msg/${transactionHash}`, '_blank')}
+                        icon={
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        }
+                      >
+                        View on CCIP Explorer
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-        {/* User Flow Information */}
-        <div className="mt-6 p-4 bg-gray-800/50 rounded-lg">
-          <h3 className="text-sm font-semibold text-gray-300 mb-2">How it works:</h3>
-          <ol className="text-xs text-gray-400 space-y-1">
-            <li>1. Ensure you're on Ethereum Sepolia network</li>
-            <li>2. Select your destination chain</li>
-            <li>3. Enter receiver address and amount</li>
-            <li>4. One transaction covers everything - no gas needed on destination!</li>
-          </ol>
+            </CardContent>
+          </Card>
+          
+          {/* User Flow Information */}
+          <Card variant="glass" className="mt-6 animate-slide-up" style={{animationDelay: '0.2s'}}>
+            <CardContent padding="md">
+              <h3 className="text-lg font-semibold text-gray-300 mb-4 text-center">How it works:</h3>
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3">
+                  <Badge variant="info" size="sm">1</Badge>
+                  <span className="text-sm text-gray-400">Ensure you're on Ethereum Sepolia network</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Badge variant="info" size="sm">2</Badge>
+                  <span className="text-sm text-gray-400">Select your destination chain</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Badge variant="info" size="sm">3</Badge>
+                  <span className="text-sm text-gray-400">Enter receiver address and amount</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Badge variant="success" size="sm">4</Badge>
+                  <span className="text-sm text-gray-400">One transaction covers everything - no gas needed on destination!</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
-    </div>
+    </>
   );
 }
-
-
-const buttonStyle = {
-  background: "rgb(96, 133, 188)",
-  border: "none",
-  borderRadius: "5px",
-  padding: "10px 20px",
-  fontSize: "1rem",
-  cursor: "pointer",
-  transition: "0.3s",
-  boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-  fontWeight: "bold",
-  color: "black",
-};
