@@ -234,7 +234,7 @@ export default function Home() {
                       </svg>
                     </div>
                     <h4 className="font-semibold text-white">Secure & Reliable</h4>
-                    <p className="text-gray-400 text-sm">Powered by Chainlink's proven infrastructure</p>
+                    <p className="text-gray-400 text-sm">Powered by Chainlink&apos;s proven infrastructure</p>
                   </div>
                   <div className="space-y-3">
                     <div className="text-blue-400">

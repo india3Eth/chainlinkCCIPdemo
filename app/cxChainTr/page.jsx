@@ -513,7 +513,7 @@ export default function USDCBridge() {
       if (error.code === 4001) {
         toast.error('Transaction Rejected', 'You rejected the transaction in MetaMask.');
       } else if (error.message.includes('insufficient funds')) {
-        toast.error('Insufficient Funds', 'You don\'t have enough ETH to pay for gas fees.');
+        toast.error('Insufficient Funds', 'You don&apos;t have enough ETH to pay for gas fees.');
       } else if (error.message.includes('execution reverted')) {
         toast.error('Contract Error', 'Transfer failed. Check your USDC balance and allowance.');
       } else if (error.message.includes('network')) {
@@ -1066,7 +1066,7 @@ export default function USDCBridge() {
               <div className="space-y-3">
                 <div className="flex items-center space-x-3">
                   <Badge variant="info" size="sm">1</Badge>
-                  <span className="text-sm text-gray-400">Ensure you're on Ethereum Sepolia network</span>
+                  <span className="text-sm text-gray-400">Ensure you&apos;re on Ethereum Sepolia network</span>
                 </div>
                 <div className="flex items-center space-x-3">
                   <Badge variant="info" size="sm">2</Badge>
